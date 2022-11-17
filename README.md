@@ -13,6 +13,19 @@ Packer:
 
 ## Configuration
 
+While it's not required to use swap-split, you can call the setup funciton if you wish to make any changes to the default settings. Currently, there is only one option, which is the filetypes you want to ignore.
+
+```lua
+-- Default settings
+require("swap-split").setup({
+    ignore_filetypes = {
+        "NvimTree"
+    }
+})
+```
+
+### Keybinds
+
 The swap function is unbound by default. You can either bind it to the command `:SwapSplit` or as a lua call `require('swap-split').swap()`
 
 Vimscript:

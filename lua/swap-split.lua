@@ -7,6 +7,7 @@
 
 local M = {
 	ignore_filetypes = {
+		'NvimTree'
 	}
 }
 local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"

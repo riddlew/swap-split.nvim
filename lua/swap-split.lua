@@ -5,7 +5,10 @@
 -- @author Xorid
 ----------------------------------------------------------------------------
 
-local M = {}
+local M = {
+	ignore_filetypes = {
+	}
+}
 local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 
 local function get_input_char()
@@ -19,41 +22,55 @@ local function clear_prompt()
 	end
 end
 
-function M.select_win()
+local function get_allowed_winids()
 	local tabpage = vim.api.nvim_get_current_tabpage()
-	local winids = vim.api.nvim_tabpage_list_wins(tabpage)
-	local current_winid = vim.api.nvim_get_current_win()
+	local ids = vim.api.nvim_tabpage_list_wins(tabpage)
+	local currentwin = vim.api.nvim_get_current_win()
+
+	return vim.tbl_filter(function(id)
+		local buf = vim.api.nvim_win_get_buf(id)
+		local ft = vim.api.nvim_buf_get_option(buf, "filetype")
+
+		return not vim.tbl_contains(M.ignore_filetypes, ft) and id ~= currentwin
+	end, ids)
+end
+
+function M.select_win()
+	-- local tabpage = vim.api.nvim_get_current_tabpage()
+	-- local winids = vim.api.nvim_tabpage_list_wins(tabpage)
+	local winids = get_allowed_winids()
+	local current_buf = vim.api.nvim_get_current_buf()
+	local current_ft = vim.api.nvim_buf_get_option(current_buf, "filetype")
 	local win_opts = {}
 	local win_chars = {}
-	local char_i = 1	
-	local laststatus = vim.o.laststatus
-	vim.o.laststatus = 2
+	local char_i = 1
 
-	if #winids == 0 then
+	if #winids == 0 or vim.tbl_contains(M.ignore_filetypes, current_ft) then
 		return -1
 	elseif #winids == 1 then
 		return winids[1]
 	end
 
+	local laststatus = vim.o.laststatus
+	vim.o.laststatus = 2
+
 	for _, id in ipairs(winids) do
-		if id ~= current_winid then
-			local char = chars:sub(char_i, char_i)
-			local ok_statusline, statusline = pcall(vim.api.nvim_win_get_option, id, "statusline")
-			local ok_hl, winhl = pcall(vim.api.nvim_win_get_option, id, "winhl")
+		local char = chars:sub(char_i, char_i)
+		local ok_statusline, statusline = pcall(vim.api.nvim_win_get_option, id, "statusline")
+		local ok_hl, winhl = pcall(vim.api.nvim_win_get_option, id, "winhl")
 
-			win_opts[id] = {
-				statusline = ok_statusline and statusline or "",
-				winhl = ok_hl and winhl or "",
-			}
+		win_opts[id] = {
+			statusline = ok_statusline and statusline or "",
+			winhl = ok_hl and winhl or "",
+		}
 
-			win_chars[char] = id
-			vim.api.nvim_win_set_option(id, "statusline", "%=" .. char .. "%=")
-			vim.api.nvim_win_set_option(id, "winhl", "StatusLine:SwapSplitStatusLine,StatusLineNC:SwapSplitStatusLine")
+		win_chars[char] = id
+		vim.api.nvim_win_set_option(id, "statusline", "%=" .. char .. "%=")
+		vim.api.nvim_win_set_option(id, "winhl", "StatusLine:SwapSplitStatusLine,StatusLineNC:SwapSplitStatusLine")
 
-			char_i = char_i + 1
-			if char_i > #chars then
-				break
-			end
+		char_i = char_i + 1
+		if char_i > #chars then
+			break
 		end
 	end
 
@@ -67,10 +84,8 @@ function M.select_win()
 	clear_prompt()
 
 	for _, id in ipairs(winids) do
-		if id ~= current_winid then
-			for opt, value in pairs(win_opts[id]) do
-				vim.api.nvim_win_set_option(id, opt, value)
-			end
+		for opt, value in pairs(win_opts[id]) do
+			vim.api.nvim_win_set_option(id, opt, value)
 		end
 	end
 
@@ -106,6 +121,10 @@ function M.swap()
 	}
 
 	swap_splits(from, to)
+end
+
+function M.setup(opts)
+	M = vim.tbl_deep_extend("force", M, opts or {})
 end
 
 return M

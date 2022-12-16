@@ -86,7 +86,9 @@ function M.select_win()
 
 	for _, id in ipairs(winids) do
 		for opt, value in pairs(win_opts[id]) do
-			vim.api.nvim_win_set_option(id, opt, value)
+			if vim.api.nvim_win_is_valid(id) then
+				vim.api.nvim_win_set_option(id, opt, value)
+			end
 		end
 	end
 
